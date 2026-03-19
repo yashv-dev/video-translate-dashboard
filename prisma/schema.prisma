@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum TranslationStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id                   String               @id @default(cuid())
+  email                String               @unique
+  name                 String?
+  passwordHash         String
+  role                 Role                 @default(USER)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  translationRequests  TranslationRequest[]
+}
+
+model TranslationRequest {
+  id              String            @id @default(cuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id])
+  videoUrl        String
+  sourceFileName  String?
+  fileSizeBytes   Int?
+  durationSeconds Float?
+  targetLanguage  String
+  lipSync         Boolean           @default(false)
+  status          TranslationStatus @default(PENDING_APPROVAL)
+  costEstimate    Float?
+  adminApproval   Boolean?
+  heygenJobId     String?
+  outputUrl       String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
