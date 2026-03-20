@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 type Request = {
   id: string;
@@ -12,6 +12,7 @@ type Request = {
   lipSync: boolean;
   status: string;
   costEstimate: number | null;
+  progress: number | null;
   outputUrl: string | null;
   createdAt: string;
 };
@@ -90,7 +91,7 @@ export default function AdminRequestList({ initialRequests }: { initialRequests:
     }
   };
 
-  const handlePollAll = async () => {
+  const handlePollAll = useCallback(async () => {
     setPolling(true);
     try {
       const res = await fetch("/api/admin/requests/poll", { method: "POST" });
@@ -110,6 +111,7 @@ export default function AdminRequestList({ initialRequests }: { initialRequests:
               return {
                 ...r,
                 status: result.status === "completed" ? "COMPLETED" : result.status === "failed" ? "FAILED" : r.status,
+                progress: result.progress ?? r.progress,
                 outputUrl: result.outputUrl || r.outputUrl,
               };
             }
@@ -122,9 +124,22 @@ export default function AdminRequestList({ initialRequests }: { initialRequests:
     } finally {
       setPolling(false);
     }
-  };
+  }, []);
 
   const hasProcessingJobs = requests.some((r) => r.status === "PROCESSING");
+
+  // Auto-poll every 30s when there are processing jobs
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    if (hasProcessingJobs) {
+      intervalRef.current = setInterval(() => {
+        handlePollAll();
+      }, 30000);
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [hasProcessingJobs, handlePollAll]);
 
   return (
     <div>
@@ -238,7 +253,17 @@ export default function AdminRequestList({ initialRequests }: { initialRequests:
                       </button>
                     )}
                     {req.status === "PROCESSING" && (
-                      <span className="text-xs text-purple-600 font-medium">Processing...</span>
+                      <div className="flex items-center gap-2 min-w-[120px]">
+                        <div className="flex-1 h-2 bg-purple-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-purple-600 rounded-full transition-all duration-500"
+                            style={{ width: `${req.progress ?? 0}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-purple-600 font-medium whitespace-nowrap">
+                          {req.progress != null ? `${req.progress}%` : "Processing..."}
+                        </span>
+                      </div>
                     )}
                     {req.status === "COMPLETED" && req.outputUrl && (
                       <a

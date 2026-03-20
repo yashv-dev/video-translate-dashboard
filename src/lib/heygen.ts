@@ -37,6 +37,7 @@ export async function checkJobStatus(jobId: string): Promise<{
   status: "pending" | "processing" | "completed" | "failed";
   outputUrl?: string;
   error?: string;
+  progress?: number;
 }> {
   const apiKey = process.env.HEYGEN_API_KEY;
   if (!apiKey) {
@@ -54,12 +55,15 @@ export async function checkJobStatus(jobId: string): Promise<{
   }
 
   const data = await res.json();
+  console.log(`[HeyGen] Raw status response for job ${jobId}:`, JSON.stringify(data));
   const heygenStatus = data.data?.status || data.status;
+  const progress = typeof data.data?.progress === "number" ? data.data.progress : undefined;
 
   if (heygenStatus === "completed" || heygenStatus === "success") {
     return {
       status: "completed",
       outputUrl: data.data?.url || data.data?.output_url,
+      progress: 100,
     };
   }
 
@@ -67,14 +71,15 @@ export async function checkJobStatus(jobId: string): Promise<{
     return {
       status: "failed",
       error: data.data?.error || data.data?.message || "Translation failed",
+      progress,
     };
   }
 
   if (heygenStatus === "processing" || heygenStatus === "running") {
-    return { status: "processing" };
+    return { status: "processing", progress };
   }
 
-  return { status: "pending" };
+  return { status: "pending", progress };
 }
 
 // Map UI language names to HeyGen's expected language names

@@ -62,6 +62,7 @@ export default async function AdminDashboard() {
           status: r.status,
           costEstimate: r.costEstimate,
           outputUrl: r.outputUrl,
+          progress: r.progress,
           createdAt: r.createdAt.toISOString(),
         }))}
       />

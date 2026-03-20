@@ -47,11 +47,12 @@ export async function POST() {
           where: { id: req.id },
           data: {
             status: "COMPLETED",
+            progress: 100,
             outputUrl: s3Url || status.outputUrl,
           },
         });
 
-        results.push({ id: req.id, status: "COMPLETED", outputUrl: s3Url || status.outputUrl });
+        results.push({ id: req.id, status: "COMPLETED", progress: 100, outputUrl: s3Url || status.outputUrl });
       } else if (status.status === "failed") {
         await prisma.translationRequest.update({
           where: { id: req.id },
@@ -60,7 +61,14 @@ export async function POST() {
 
         results.push({ id: req.id, status: "FAILED", error: status.error });
       } else {
-        results.push({ id: req.id, status: status.status });
+        // Save progress if available
+        if (status.progress != null) {
+          await prisma.translationRequest.update({
+            where: { id: req.id },
+            data: { progress: status.progress },
+          });
+        }
+        results.push({ id: req.id, status: status.status, progress: status.progress ?? null });
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
