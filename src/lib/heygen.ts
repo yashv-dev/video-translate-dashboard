@@ -20,6 +20,9 @@ export async function submitTranslationJob(params: {
       video_url: params.videoUrl,
       output_language: mapLanguageCode(params.targetLanguage),
       translate_audio_only: !params.lipSync,
+      mode: "quality",
+      enable_dynamic_duration: "true",
+      keep_the_same_format: true,
     }),
   });
 
